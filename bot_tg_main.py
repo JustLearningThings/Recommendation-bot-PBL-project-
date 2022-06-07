@@ -18,7 +18,6 @@ user_dict_recommend = {'region' : None, 'speciality': None, 'alcohol': None, 'de
 PATH_TO_DB = './dataset.xlsx'
 recommendations_num = 5
 
-
 # helper functions
 
 def check_query(d):
@@ -55,16 +54,16 @@ def callback_worker(call):
 
     if call.data == "r":
         keyboard_reg = types.InlineKeyboardMarkup(row_width=2)
-        item_r = types.InlineKeyboardButton("Rascanovca", callback_data='rascanovca')
-        item_c = types.InlineKeyboardButton("Centru", callback_data='centru')
-        item_tc = types.InlineKeyboardButton("Telecentru", callback_data='telecentru')
-        item_cioc = types.InlineKeyboardButton("Ciocana", callback_data='ciocana')
-        item_bot = types.InlineKeyboardButton("Botanica", callback_data='botanica')
+        item_r = types.InlineKeyboardButton("Rascanovca", callback_data='Rascani')
+        item_c = types.InlineKeyboardButton("Centru", callback_data='Centru')
+        item_tc = types.InlineKeyboardButton("Telecentru", callback_data='Telecentru')
+        item_cioc = types.InlineKeyboardButton("Ciocana", callback_data='Ciocana')
+        item_bot = types.InlineKeyboardButton("Botanica", callback_data='Botanica')
 
         keyboard_reg.add(item_r, item_c, item_tc, item_cioc, item_bot)
-        bot.send_message(call.message.chat.id, "Chose preferable region", reply_markup=keyboard_reg)
+        bot.send_message(call.message.chat.id, "Choose preferable region", reply_markup=keyboard_reg)
 
-    list_reg = ['rascanovca', 'centru', 'telecentru', 'ciocana', 'botanica']
+    list_reg = ['Rascani', 'Centru', 'Telecentru', 'Ciocana', 'Botanica']
 
     if call.data in list_reg:
         user_dict_recommend['region'] = call.data
@@ -86,7 +85,7 @@ def callback_worker(call):
 
         keyboard_rec.add(item1, item2, item3, item4, item5, item6, item7, item8, item9,
                           item10, item11, item12, item13)
-        bot.send_message(call.message.chat.id, "Chose speciality for recommendation", reply_markup=keyboard_rec)
+        bot.send_message(call.message.chat.id, "Choose speciality for recommendation", reply_markup=keyboard_rec)
 
     list_speciality = ['restaurant','cafe','fast food', 'japanese', 'italian', 'mexican', 'romanian / moldavian', 'european', 'other cuisine', 'grill', 'bar', 'canteen', "doesn't matter" ]
 
@@ -162,7 +161,47 @@ def callback_worker(call):
             user_dict_recommend[key] = "No"
 
     # if all the necessary information has been gathered recommend
+    global db
+
     if check_query(user_dict_recommend):
+        dataset = {}
+
+        if read_from_local:
+            dataset = process_database(PATH_TO_DB, sector=user_dict_recommend['region'])
+        else:
+            dataset = {
+                'name': [],
+                'rating': [],
+                'wrkh': [],
+                'address': [],
+                'sector': [],
+                'spec': [],
+                'has_alc': [],
+                'has_park': [],
+                'has_delivery': [],
+                'coord': []
+            }
+
+            for place in db:
+                dataset['name'].append(place['name'])
+                dataset['rating'].append(place['rating'])
+                dataset['wrkh'].append(place['workingHours'])
+                dataset['address'].append(place['address'])
+                dataset['sector'].append(place['sector'])
+                dataset['spec'].append(place['specialization'])
+                dataset['has_alc'].append(place['hasAlcohol'])
+                dataset['has_park'].append(place['hasPark'])
+                dataset['has_delivery'].append(place['hasDelivery'])
+                dataset['coord'].append(place['coordinates'])
+
+            df = pd.DataFrame(dataset)
+            df = df[df['sector'] == user_dict_recommend['region']]
+            df.reset_index()
+            dataset = Dataset(df)
+            dataset.vectorize()
+        
+        recommender = Recommender(dataset.X)
+
         # create json from the given information
         data = json.dumps(user_dict_recommend)
 
@@ -184,39 +223,15 @@ def callback_worker(call):
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Your choice was saved', reply_markup=None)
 
 # read the database and vectorize it
+read_from_local = True
+dataset = {}
+
 try:
     db = Place.getAllPlaces()
     db = [place.toDict() for place in db]
 
-    dataset = {
-        'name': [],
-        'rating': [],
-        'wrkh': [],
-        'address': [],
-        'sector': [],
-        'spec': [],
-        'has_alc': [],
-        'has_park': [],
-        'has_delivery': [],
-        'coord': []
-    }
-
-    for place in db:
-        # print(place.toDict())
-        dataset['name'].append(place['name'])
-        dataset['rating'].append(place['rating'])
-        dataset['wrkh'].append(place['workingHours'])
-        dataset['address'].append(place['address'])
-        dataset['sector'].append(place['sector'])
-        dataset['spec'].append(place['specialization'])
-        dataset['has_alc'].append(place['hasAlcohol'])
-        dataset['has_park'].append(place['hasPark'])
-        dataset['has_delivery'].append(place['hasDelivery'])
-        dataset['coord'].append(place['coordinates'])
+    read_from_local = False
 except:
-    dataset = process_database(PATH_TO_DB)
-
-# create the recommender object that fits the database
-recommender = Recommender(dataset.X)
+    print('Could not dataset load from the database. Switching to local dataset.')
 
 bot.polling(none_stop=True, interval=0)

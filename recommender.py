@@ -332,11 +332,13 @@ class Vectorizer:
         return np.array(self.item)
 
 # Helper functions
-def process_database(path: str, columns: list[str] = ['spec', 'has_alc', 'has_delivery', 'has_park']) -> np.array:
+def process_database(path: str, sector: str, columns: list[str] = ['spec', 'has_alc', 'has_delivery', 'has_park']) -> np.array:
     '''
     Create the DataFrame from the database at the given path and vectorize it
     :param path: str
         The path to the database
+    :param sector: str
+        The region to select from the DataFrame
     :param columns: list[str]
         A list of column names to be selected from the database for vectorization
     :returns np.array
@@ -344,6 +346,9 @@ def process_database(path: str, columns: list[str] = ['spec', 'has_alc', 'has_de
     '''
 
     df = pd.read_excel(path)
+    df.drop(columns=['Unnamed: 0'])
+    df = df[df['sector'] == sector]
+    df.reset_index()
     dataset = Dataset(df, columns=columns)
     dataset.vectorize()
 
