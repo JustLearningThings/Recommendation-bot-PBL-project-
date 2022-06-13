@@ -54,7 +54,7 @@ def callback_worker(call):
 
     if call.data == "r":
         keyboard_reg = types.InlineKeyboardMarkup(row_width=2)
-        item_r = types.InlineKeyboardButton("Rascanovca", callback_data='Rascani')
+        item_r = types.InlineKeyboardButton("Riscani", callback_data='Riscani')
         item_c = types.InlineKeyboardButton("Centru", callback_data='Centru')
         item_tc = types.InlineKeyboardButton("Telecentru", callback_data='Telecentru')
         item_cioc = types.InlineKeyboardButton("Ciocana", callback_data='Ciocana')
@@ -63,7 +63,7 @@ def callback_worker(call):
         keyboard_reg.add(item_r, item_c, item_tc, item_cioc, item_bot)
         bot.send_message(call.message.chat.id, "Choose preferable region", reply_markup=keyboard_reg)
 
-    list_reg = ['Rascani', 'Centru', 'Telecentru', 'Ciocana', 'Botanica']
+    list_reg = ['Riscani', 'Centru', 'Telecentru', 'Ciocana', 'Botanica']
 
     if call.data in list_reg:
         user_dict_recommend['region'] = call.data
